@@ -8,26 +8,25 @@
 #define MAX_NODE 5
 #define READ_PIPE 0
 #define WRITE_PIPE 1
-int graph[5][5][2]; //fd graph 전역변수
-int node[MAX_NODE]; //각 프로세스(노드)의 pid 전역변수
-typedef enum _signal_type// 파이프를 통해 전달되는 시그널 종류
+int graph[5][5][2];       //fd graph 전역변수
+int node[MAX_NODE];       //각 프로세스(노드)의 pid 전역변수
+typedef enum _signal_type // 파이프를 통해 전달되는 시그널 종류
 {
     YOUR_TURN,
     FINISHED_JOB,
+    FINISHED_JOB_AFTER_LAST,
     SHOUD_EXIT,
     GOOD_BYE
 } signalType;
 
 void initProgram();
 bool printOneLine(int32_t fd);
-ssize_t rcvSignal(int start, int end);
+ssize_t rcvSignal(int start, int end, signalType *signal);
 ssize_t sendSignal(int start, int end, signalType signal);
 void openPipeBetween(int node1, int node2);
 void closePipeExcept(int node);
 void closePipeAll();
 void inNode(int nowNode, int32_t fd);
-
-
 
 //초기화 함수( 파이프 열고 닫고 포크하고)
 void initProgram()
@@ -81,11 +80,9 @@ bool printOneLine(int32_t fd)
 }
 
 //start 프로세스(노드)에서 end 프로세스(노드)로 가는 신호를 받는 함수(end)프로세스에서 작동
-ssize_t rcvSignal(int start, int end)
+ssize_t rcvSignal(int start, int end, signalType *signal)
 {
-    signalType signal;
-    read(graph[start][end][READ_PIPE], &signal, sizeof(signal));
-    return signal;
+    return read(graph[start][end][READ_PIPE], signal, sizeof(*signal));
 }
 
 //start 프로세스(노드) 에서 end 프로세스(노드)로 신호를 보내는 함수(start)프로세스에서 작동
@@ -152,24 +149,24 @@ void inNode(int nowNode, int32_t fd)
     if (node[nowNode] == getpid())
     {
         signalType signal;
-        bool iKnow = false;
-        bool direction = true;
+        bool itsDone = false;
         bool meetEOF = false;
         bool isInitial = false;
+        bool direction = true;
         int nextNode = nowNode + 1;
         int prevNode = nowNode - 1;
         if (nextNode == MAX_NODE)
             nextNode = 0;
         if (prevNode == -1)
             prevNode = MAX_NODE - 1;
-        if (nowNode == 0) // 시작노드(메시지 전송을 처음에 하는 노드)  경우
-            isInitial = true;//처음이라고 알려줌
-        if (isInitial) //처음일 경우 (1번만 실행)
+        if (nowNode == 0)     // 시작노드(메시지 전송을 처음에 하는 노드)  경우
+            isInitial = true; //처음이라고 알려줌
+        if (isInitial)        //처음일 경우 (1번만 실행)
         {
             meetEOF = printOneLine(fd);
             if (meetEOF)
             {
-                iKnow = true;
+                itsDone = true;
                 printf("%d read all data\n", node[nowNode]);
                 sendSignal(nowNode, nextNode, FINISHED_JOB);
             }
@@ -181,43 +178,62 @@ void inNode(int nowNode, int32_t fd)
         while (1)
         {
             if (direction)
-                signal = rcvSignal(prevNode, nowNode);
+                rcvSignal(prevNode, nowNode, &signal);
             else
-                signal = rcvSignal(nextNode, nowNode);
+                rcvSignal(nextNode, nowNode, &signal);
             switch (signal)
             {
             case YOUR_TURN:
                 meetEOF = printOneLine(fd);
                 if (meetEOF)
                 {
-                    iKnow = true;
+                    itsDone = true;
                     printf("%d read all data\n", node[nowNode]);
-                    sendSignal(nowNode, nextNode, FINISHED_JOB);
+                    if(nextNode==0) sendSignal(nowNode,nextNode,FINISHED_JOB_AFTER_LAST);
+                    else sendSignal(nowNode, nextNode, FINISHED_JOB);
                 }
                 else
                     sendSignal(nowNode, nextNode, YOUR_TURN);
                 break;
             case FINISHED_JOB:
-                if (iKnow)
+                if (itsDone)
                 {
                     direction = false;
                     sendSignal(nowNode, nextNode, SHOUD_EXIT);
                 }
                 else
                 {
-                    sendSignal(nowNode, nextNode, FINISHED_JOB);
+                    if (nextNode == 0)
+                    {
+                        sendSignal(nowNode, nextNode, FINISHED_JOB_AFTER_LAST);
+                    }
+                    else
+                    {
+                        sendSignal(nowNode, nextNode, FINISHED_JOB);
+                    }
                 }
                 break;
+            case FINISHED_JOB_AFTER_LAST:
+                if (itsDone)
+                {
+                    direction = false;
+                    sendSignal(nowNode, nextNode, SHOUD_EXIT);
+                }
+                else
+                {
+                    direction = false;
+                    sendSignal(nowNode, nextNode, FINISHED_JOB_AFTER_LAST);
+                }
+
             case SHOUD_EXIT:
-                
-                if (nowNode == MAX_NODE - 1)
+                if (nextNode == 0) //lastNode
                 {
                     printf("%d I'm exiting...\n", node[nowNode]);
                     sendSignal(nowNode, prevNode, GOOD_BYE);
                     closePipeAll();
-                    return ;
+                    return;
                 }
-                else if(nextNode !=0)
+                else
                 {
                     direction = false;
                     sendSignal(nowNode, nextNode, SHOUD_EXIT);
