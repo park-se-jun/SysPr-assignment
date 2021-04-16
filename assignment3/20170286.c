@@ -4,8 +4,8 @@ int main(int32_t argc, char *argv[])
 {
 
     int32_t fd;
-    memset(graph, -1, sizeof(graph));
-    memset(node, -1, sizeof(node));
+    memset(graph, -1, sizeof(graph));//각 전역변수의 초기화
+    memset(node, -1, sizeof(node));//각 전역변수의 초기화
     if (argc != 2)
     {
         printf("Usage: 20170286 <file>\n");
@@ -17,11 +17,11 @@ int main(int32_t argc, char *argv[])
         printf("Error  Unable %d to open %s\n", fd, argv[1]);
         return 0;
     }
-    initProgram();
-    inNode(0, fd);
-    inNode(1, fd);
-    inNode(2, fd);
-    inNode(3, fd);
-    inNode(4, fd);
+    initProgram();//파이프를 열고 닫고 포크하기
+    inNode(0, fd);//0번 노드에서 일어나는 일
+    inNode(1, fd);//1번 노드에서 일어나는 일
+    inNode(2, fd);//2번 노드에서 일어나는 일
+    inNode(3, fd);//3번 노드에서 일어나는 일
+    inNode(4, fd);//4번 노드에서 일어나는 일
     return 0;
 }

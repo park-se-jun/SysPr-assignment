@@ -9,14 +9,15 @@
 #define READ_PIPE 0
 #define WRITE_PIPE 1
 int graph[5][5][2]; //fd graph 전역변수
-int node[MAX_NODE]; //전역변수
-typedef enum _signal_type
+int node[MAX_NODE]; //각 프로세스(노드)의 pid 전역변수
+typedef enum _signal_type// 파이프를 통해 전달되는 시그널 종류
 {
     YOUR_TURN,
     FINISHED_JOB,
     SHOUD_EXIT,
     GOOD_BYE
 } signalType;
+
 void initProgram();
 bool printOneLine(int32_t fd);
 ssize_t rcvSignal(int start, int end);
@@ -26,6 +27,9 @@ void closePipeExcept(int node);
 void closePipeAll();
 void inNode(int nowNode, int32_t fd);
 
+
+
+//초기화 함수( 파이프 열고 닫고 포크하고)
 void initProgram()
 {
     int myPid;
@@ -52,6 +56,8 @@ void initProgram()
     }
     return;
 }
+
+//개행까지 출력하는 함수 파일의 끝에서 true를 출력
 bool printOneLine(int32_t fd)
 {
     char oneChar;
@@ -73,21 +79,29 @@ bool printOneLine(int32_t fd)
         }
     }
 }
+
+//start 프로세스(노드)에서 end 프로세스(노드)로 가는 신호를 받는 함수(end)프로세스에서 작동
 ssize_t rcvSignal(int start, int end)
 {
     signalType signal;
     read(graph[start][end][READ_PIPE], &signal, sizeof(signal));
     return signal;
 }
+
+//start 프로세스(노드) 에서 end 프로세스(노드)로 신호를 보내는 함수(start)프로세스에서 작동
 ssize_t sendSignal(int start, int end, signalType signal)
 {
     return write(graph[start][end][WRITE_PIPE], &signal, sizeof(signal));
 }
+
+//노드1과 노드2 사이에 파이프 2개를 여는 함수
 void openPipeBetween(int node1, int node2)
 {
     pipe(graph[node1][node2]);
     pipe(graph[node2][node1]);
 }
+
+//node에 해당하는 파이프를 제외하고 다 닫는 함수
 void closePipeExcept(int node)
 {
     for (int i = 0; i < MAX_NODE; i++)
@@ -118,6 +132,8 @@ void closePipeExcept(int node)
         }
     }
 }
+
+//열려있는 모든 파이프를 닫는 함수
 void closePipeAll()
 {
     for (int i = 0; i < MAX_NODE; i++)
@@ -129,6 +145,8 @@ void closePipeAll()
         }
     }
 }
+
+//nowNode에서 일어나는 동작
 void inNode(int nowNode, int32_t fd)
 {
     if (node[nowNode] == getpid())
@@ -144,9 +162,9 @@ void inNode(int nowNode, int32_t fd)
             nextNode = 0;
         if (prevNode == -1)
             prevNode = MAX_NODE - 1;
-        if (nowNode == 0) // 시작노드일  경우
-            isInitial = true;
-        if (isInitial) //처음일 경우
+        if (nowNode == 0) // 시작노드(메시지 전송을 처음에 하는 노드)  경우
+            isInitial = true;//처음이라고 알려줌
+        if (isInitial) //처음일 경우 (1번만 실행)
         {
             meetEOF = printOneLine(fd);
             if (meetEOF)
