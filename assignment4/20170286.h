@@ -21,7 +21,7 @@ int parseLine(char *sArr[], int size);
 char mem[256];
 typedef struct varinfo{
     char name[32];
-    char size;
+    unsigned char size;
     struct varinfo* next;
     struct varinfo* prev;
 } varinfo;
@@ -201,7 +201,8 @@ int isSizeOver(int size){
 }
 void allocate_Char(char* name){
     char* token[1]={NULL,};
-    char value,listSize;
+    char value;
+    unsigned char listSize;
     if(isAlreadyName(name)) return ;
     if(isSizeOver(sizeof(char))) return ;
     while(1){
@@ -226,9 +227,9 @@ void allocate_Char(char* name){
 void allocate_Int(char* name){
     char* token[1]={NULL,};
     int value;
-    char listSize;
+    unsigned char listSize;
     if(isAlreadyName(name)) return ;
-    if(isSizeOver(sizeof(char))) return ;
+    if(isSizeOver(sizeof(int))) return ;
     while(1){
         printf("Please specify a value for the data type\n");
         if(parseLine(token,1)==0){
@@ -252,9 +253,9 @@ void allocate_Int(char* name){
 void allocate_Double(char* name){
     char* token[1]={NULL,};
     double value;
-    char listSize;
+    unsigned char listSize;
     if(isAlreadyName(name)) return ;
-    if(isSizeOver(sizeof(char))) return ;
+    if(isSizeOver(sizeof(double))) return ;
     while(1){
         printf("Please specify a value for the data type\n");
         if(parseLine(token,1)==0){
@@ -295,7 +296,7 @@ void allocate_Struct_value(int memberCount,char*name){
         if(parseLine(token,2)==0){
             if (strcmp(token[0], "char")==0)
             {
-                if(isSizeOver(structSize)) 
+                if(isSizeOver(structSize+1)) 
                 {
                     free(node);
                     return;
@@ -305,7 +306,7 @@ void allocate_Struct_value(int memberCount,char*name){
             }
             else if (strcmp(token[0], "int") == 0)
             {
-                if(isSizeOver(structSize)) 
+                if(isSizeOver(structSize+4)) 
                 {
                     free(node);
                     return;
@@ -315,7 +316,7 @@ void allocate_Struct_value(int memberCount,char*name){
             }
             else if (strcmp(token[0], "double") == 0)
             {
-                if(isSizeOver(structSize))
+                if(isSizeOver(structSize+8))
                 {
                     free(node);
                     return;
@@ -351,7 +352,7 @@ void deallocate()
 {
     char* token[1];
     varinfo* nodeToRemove;
-    int index=0;
+    int indexOfDest=0;
     printf("what is the name of data you want to deallocate?\n");
     if(parseLine(token,1)==0){
         nodeToRemove = findByName(varlist,token[0]);
@@ -359,8 +360,11 @@ void deallocate()
             printf("cant't find name :\"%s\"\n",token[0]);
             return ;
         }else{
-            index=getIndexOf(nodeToRemove);
-            memcpy((void*)(mem+index),(void*)(mem+index+nodeToRemove->size),sizeof(mem)-(index+nodeToRemove->size));
+            indexOfDest=getIndexOf(nodeToRemove);
+            int indexOfSrc = indexOfDest+nodeToRemove->size;
+            int sizeOfSrc = sizeof(mem)-(indexOfSrc);
+            memcpy((void*)(mem+indexOfDest),(void*)(mem+indexOfSrc),sizeOfSrc);
+            memset((void*)(mem +indexOfDest+sizeOfSrc),0,nodeToRemove->size);
             removeNode(nodeToRemove);
             dump_mem(mem,sizeof(mem));
         }
