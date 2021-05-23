@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "mystdio.h": "c",
+        "cstdio": "c"
+    }
+}
