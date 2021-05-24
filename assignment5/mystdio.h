@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <fcntl.h>
-#define BUFSIZE 200
+#define BUFSIZE 300
 #define EOF -1
 #define stdin 1
 #define stdout 2
@@ -15,17 +15,12 @@
 typedef struct myFile
 {
     int fd;
-    int size;
-    int actual_size;
     int mode;
     int flag;
-    char lastop;
     bool eof;
     bool eof_seen;
     char *buffer_base;//버퍼 베이스는 바뀌지 않는다.
-    char *write_buf;
     char *buffer_end;
-    char *write_buf_end;
     char * cursor;
     bool read;
     bool write;
