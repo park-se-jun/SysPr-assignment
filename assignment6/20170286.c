@@ -11,8 +11,10 @@ void reader(void)
 	// your code
         P(&mutex);
         if(feof(fp)){
-            printf("Thread %d Read All Data from file!!\n",get_thread_id());
-            break;
+            printf("Thread %d : File END...\n",get_thread_id());
+            exit(1);
+
+            
         }
             
         printf("Thread %d is reading a line\n",get_thread_id());
@@ -46,6 +48,10 @@ int main(int argc, char *argv[])
 	// example of initializing a semaphore
     mutex = sem_create(1);
     // your code
+    if(argv[1]==NULL){
+        printf("wrong input \nplease input like this: ./20172086 \"input path\"\n ");
+        return 0;
+    }
     fp= fopen(argv[1],"r");
     // create threads
     create_thread(reader);
@@ -58,7 +64,6 @@ int main(int argc, char *argv[])
     
     // stupid while loop
     while (1) {
-    	sleep(1);
     }
 }   
 

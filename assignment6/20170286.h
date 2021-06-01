@@ -104,7 +104,7 @@ typedef struct semaphore_t {
 semaphore_t sem_create(int value) {
 	semaphore_t* sem = (semaphore_t*) malloc(sizeof(semaphore_t));
 	sem->counter = value;
-	sem->sem_q = thread_queue;
+	sem->sem_q = NULL;
 	return *sem;
 }
 
@@ -114,6 +114,8 @@ void P(semaphore_t *sem) {
 
 	// your code
 		while(sem->counter<=0){
+			addQueue(&(sem->sem_q),curr_thread);
+			yield();
 		}
 		sem->counter--;
 }
@@ -123,6 +125,12 @@ void P(semaphore_t *sem) {
 // Note: The V routine also "yields" to the next runnable thread.
 void V(semaphore_t *sem) {
 	sem->counter++;
+	if(sem->counter >=1)
+	{
+		tcb_t* t = delQueue(&(sem->sem_q));
+		addQueue(&thread_queue,t);
+
+	}
 	// your code
 	yield();
 }
